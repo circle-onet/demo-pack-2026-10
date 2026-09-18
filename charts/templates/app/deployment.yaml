@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-to-green-app
+  labels:
+    app: go-to-green-app
+    {{- include "circleci.labels" . | nindent 4 }}
+  annotations:
+    {{- include "circleci.annotations" . | nindent 4 }}
+    {{- with .Values.podAnnotations }}
+    {{- toYaml . | nindent 4 }}
+    {{ end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: go-to-green-app
+  template:
+    metadata:
+      labels:
+        app: go-to-green-app
+        {{- include "circleci.labels" . | nindent 8 }}
+      annotations:
+        {{- include "circleci.annotations" . | nindent 8 }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{ end }}
+    spec:
+      {{ if .Values.images.registry.secrets }}
+      imagePullSecrets:
+        - name: {{ .Values.images.registry.secrets }}
+      {{ end }}
+      initContainers:
+        - name: init-sleep
+          image: alpine
+          command: ['sh', '-c', 'sleep 10']
+      containers:
+        - name: go-to-green-app
+          image: "{{ .Values.images.registry.hostname }}/{{ .Values.images.name.app.repo }}:{{ .Values.images.name.app.tag }}"
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 58888
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

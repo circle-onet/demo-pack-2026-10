@@ -1,0 +1,29 @@
+circleProjectId: ""
+
+images:
+  registry:
+    hostname: 992382483259.dkr.ecr.ap-northeast-1.amazonaws.com
+  name:
+    app:
+      repo: makotom/go-to-green
+  pullPolicy: IfNotPresent
+
+app:
+  hostname: go-to-green.aws.cci-2026.makotom.net
+  certARN: arn:aws:acm:ap-northeast-1:992382483259:certificate/24d6e171-f3c9-4799-b857-fe1017ee523b
+
+replicaCount: 1
+
+podAnnotations: {}
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi

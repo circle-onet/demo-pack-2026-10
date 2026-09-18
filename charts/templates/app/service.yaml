@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-to-green-app
+  labels:
+    app: go-to-green-app
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: {{ .Values.app.certARN }}
+    service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: Name=go-to-green,Owner=makotom
+    external-dns.alpha.kubernetes.io/hostname: {{ .Values.app.hostname }}
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 443
+      targetPort: 58888
+      protocol: TCP
+      name: go-to-green-app-https
+  selector:
+    app: go-to-green-app

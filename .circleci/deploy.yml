@@ -1,0 +1,93 @@
+version: 2.1
+
+commands:
+  configure-oidc-for-aws-cli:
+    parameters:
+      file-pointer-var:
+        type: string
+        default: AWS_WEB_IDENTITY_TOKEN_FILE
+      aws-role-arn:
+        type: string
+    steps:
+      - run:
+          name: Make a real temporary filename for << parameters.file-pointer-var >>
+          command: tee -a "${BASH_ENV}" \<<<"export ${FILE_POINTER_VAR}='$(mktemp -u)'"
+          environment:
+            FILE_POINTER_VAR: << parameters.file-pointer-var >>
+      - run:
+          name: Write CIRCLE_OIDC_TOKEN to the file pointed by << parameters.file-pointer-var >>
+          command: printenv CIRCLE_OIDC_TOKEN >"$(printenv "${FILE_POINTER_VAR}")"
+          environment:
+            FILE_POINTER_VAR: << parameters.file-pointer-var >>
+      - run:
+          name: Set AWS_ROLE_ARN
+          command: tee -a "${BASH_ENV}" \<<<"export AWS_ROLE_ARN='${AWS_ROLE_ARN}'"
+          environment:
+            AWS_ROLE_ARN: << parameters.aws-role-arn >>
+
+  install-kube-toolchain:
+    steps:
+      - run:
+          name: Install cURL
+          command: pacman -Syu --noconfirm curl kubectl helm
+
+  setup-kubeconfig:
+    parameters:
+      eks-cluster-name:
+        type: string
+      aws-region:
+        type: string
+      aws-role-arn:
+        type: string
+    steps:
+      - run:
+          name: Install AWS CLI
+          command: pacman -Syu --noconfirm aws-cli-v2
+      - configure-oidc-for-aws-cli:
+          aws-role-arn: << parameters.aws-role-arn >>
+      - run:
+          command: aws eks update-kubeconfig --name "${EKS_CLUSTER_NAME}" --region "${AWS_REGION}"
+          environment:
+            EKS_CLUSTER_NAME: << parameters.eks-cluster-name >>
+            AWS_REGION: << parameters.aws-region >>
+
+jobs:
+  release:
+    docker:
+      - image: archlinux
+    parameters:
+      eks-cluster-name:
+        type: string
+      aws-region:
+        type: string
+      aws-role-arn:
+        type: string
+    environment:
+      TARGET_VERSION: << pipeline.deploy.target_version >>
+    steps:
+      - checkout
+      - run:
+          name: Checkout the target version
+          command: |
+            pacman -Syu --noconfirm git
+            git checkout "$(git rev-parse "$(IFS=- read -ra parsed \<<<"${TARGET_VERSION}"; echo "${parsed[1]}")")"
+
+      - install-kube-toolchain
+      - setup-kubeconfig:
+          eks-cluster-name: << parameters.eks-cluster-name >>
+          aws-region: << parameters.aws-region >>
+          aws-role-arn: << parameters.aws-role-arn >>
+
+      - run:
+          name: Deploy with Helm
+          working_directory: charts
+          command: |
+            helm upgrade --install --create-namespace -n go-to-green-staging --set images.name.app.tag="${TARGET_VERSION}" --set circleProjectId="${CIRCLE_PROJECT_ID}" go-to-green .
+
+workflows:
+  run:
+    jobs:
+      - release:
+          eks-cluster-name: makoto-workbench
+          aws-region: ap-northeast-1
+          aws-role-arn: arn:aws:iam::992382483259:role/makoto

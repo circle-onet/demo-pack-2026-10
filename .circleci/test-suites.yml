@@ -1,0 +1,22 @@
+name: unit tests
+
+discover: find src -type f -name '*.test.ts'
+
+run: JEST_JUNIT_OUTPUT_FILE="<< outputs.junit >>" yarn test:ci << test.atoms >>
+
+analysis: yarn jest --runInBand --silent --bail --coverage --coverageReporters=lcovonly --coverageDirectory="$(dirname '<< outputs.lcov >>')" << test.atoms >>
+
+outputs:
+  junit: test-results/jest/junit.xml
+  lcov: coverage/lcov.info
+
+options:
+  test-impact-analysis: true
+  dynamic-test-splitting: true
+  max-auto-rerun: 10
+  full-test-run-paths:
+    - package.json
+    - yarn.lock
+    - jest.config.js
+    - tsconfig.json
+    - .circleci/*.yml

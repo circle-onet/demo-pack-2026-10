@@ -1,0 +1,4 @@
+apiVersion: v2
+name: go-to-green
+description: Typescript-based sample app
+version: "0.0.1"

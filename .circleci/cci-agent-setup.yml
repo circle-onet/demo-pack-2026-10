@@ -1,0 +1,27 @@
+version: 2.1
+
+jobs:
+  cci-agent-setup:
+    docker:
+      - image: archlinux
+    steps:
+      - run:
+          name: Install dependencies
+          command: |
+            pacman -Syu --noconfirm nvm which python3 git jq yarn
+            tee -a "${BASH_ENV}" \<<<'source /usr/share/nvm/init-nvm.sh'
+      - run: cat /etc/os-release
+      - run:
+          name: Tap SDK messages
+          command: |
+            while sleep 1; do
+              if [[ -f /tmp/prompt-task-artifacts/prompt-task-execution-output.json ]]; then
+                tail -f /tmp/prompt-task-artifacts/prompt-task-execution-output.json | jq '. | select(.type = "sdk_message") | .data.message.content'
+              fi
+            done
+          background: true
+
+workflows:
+  cci-agent-setup:
+    jobs:
+      - cci-agent-setup
