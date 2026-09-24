@@ -7,12 +7,15 @@ class SerialNumber {
     }
 
     public getNewSerialNumber(user: string = ''): number {
-        this.users.push({
+        const newUser = {
             serial: this.curSerial,
             user
-        });
+        };
 
-        return this.curSerial += 1;
+        this.users.push(newUser);
+        this.curSerial += 1;
+
+        return newUser.serial;
     }
 }
 
